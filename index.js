@@ -51,11 +51,14 @@ module.exports = (thisDir, dir, options) => {
   }
 
   openDir(baseDir)
-  // do tree
-  dirPath.forEach(i => (propsArrHanler(tree[baseDir], i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')))[camelCase(path.basename(i, 'js'))] = require(i)))
-  // do notTree
-  dirPath.forEach(i => (notTree[baseDir][options.nameHandler(camelCase(i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')).concat(path.basename(i, 'js')).map(i => camelCase(i)).join('.')))] = require(i)))
-  // clean dirPath
+
+  dirPath.forEach(i => {
+    // do tree
+    propsArrHanler(tree[baseDir], i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')))[camelCase(path.basename(i, 'js'))] = require(i)
+    // do notTree
+    notTree[baseDir][options.nameHandler(camelCase(i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')).concat(path.basename(i, 'js')).map(i => camelCase(i)).join('.')))] = require(i)
+  })
+
   dirPath.splice(0, dirPath.length)
   return options.isNoTree ? notTree[baseDir] : tree[baseDir]
 }
