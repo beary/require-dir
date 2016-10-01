@@ -28,22 +28,34 @@ function propsArrHanler (parent, arr) {
   return (arr.length > 1) ? propsArrHanler(parent[arr.shift()], arr) : parent[arr.shift()] || parent
 }
 
-module.exports = (dir, thisDir, isNoTree) => {
+module.exports = (thisDir, dir, options) => {
+  if (typeof options !== 'object') {
+    options = { isNoTree: options, nameHandler: name => name }
+  } else if (!options.nameHandler) {
+    options.isNoTree = true
+    options.nameHandler = name => name
+  } else {
+    options.isNoTree = true
+    if (typeof options.nameHandler('testStr') !== 'string') throw new Error('function "nameHandler" must return a string')
+  }
+
   let baseDir = path.isAbsolute(dir) ? dir : path.join(thisDir, dir)
+
   if (!tree[baseDir]) {
     tree[baseDir] = {}
     notTree[baseDir] = {}
-  } else if (isNoTree) {
-    return notTree[baseDir] = {}
+  } else if (options.isNoTree) {
+    return notTree[baseDir]
   } else {
     return tree[baseDir]
   }
+
   openDir(baseDir)
   // do tree
   dirPath.forEach(i => (propsArrHanler(tree[baseDir], i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')))[camelCase(path.basename(i, 'js'))] = require(i)))
   // do notTree
-  dirPath.forEach(i => notTree[baseDir][camelCase(i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')).concat(path.basename(i, 'js')).map(i => camelCase(i)).join('.'))] = require(i))
+  dirPath.forEach(i => (notTree[baseDir][options.nameHandler(camelCase(i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')).concat(path.basename(i, 'js')).map(i => camelCase(i)).join('.')))] = require(i)))
   // clean dirPath
   dirPath.splice(0, dirPath.length)
-  return isNoTree ? notTree[baseDir] : tree[baseDir]
+  return options.isNoTree ? notTree[baseDir] : tree[baseDir]
 }
