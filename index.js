@@ -4,26 +4,22 @@ const dirPath = []
 const tree = {}
 const notTree = {}
 
-function dirFilter (absolutePathStr) {
-  return fs.lstatSync(absolutePathStr).isDirectory()
-}
+const dirFilter = absolutePathStr => fs.lstatSync(absolutePathStr).isDirectory()
 
-function jsFileFilter (absolutePathStr) {
-  return fs.lstatSync(absolutePathStr).isFile() && absolutePathStr.endsWith('.js')
-}
+const jsFileFilter = absolutePathStr => fs.lstatSync(absolutePathStr).isFile() && absolutePathStr.endsWith('.js')
 
-function openDir (dir) {
+const openDir = dir => {
   let readRes = fs.readdirSync(dir)
   dirPath.push(...readRes.map(p => path.join(dir, p)).filter(jsFileFilter))
   readRes.map(p => path.join(dir, p)).filter(dirFilter).forEach(i => openDir(i))
 }
 
-function camelCase (name) {
+const camelCase = name => {
   let spil = name.trim().split(/[^0-9a-zA-Z]/).filter(i => (i !== ''))
   return (spil.shift() + spil.map(i => (`${i.charAt(0).toUpperCase()}${i.substr(1)}`)).join(''))
 }
 
-function propsArrHanler (parent, arr) {
+const propsArrHanler = (parent, arr) => {
   if (!parent[arr[0]] && arr.length > 0) parent[camelCase(arr[0])] = {}
   return (arr.length > 1) ? propsArrHanler(parent[arr.shift()], arr) : parent[arr.shift()] || parent
 }
