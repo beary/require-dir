@@ -1,22 +1,49 @@
-var fs = require('fs');
-var path = require('path');
-var tmp = {};
+const fs = require('fs')
+const path = require('path')
+const dirPath = []
+const tree = {}
+const notTree = {}
 
-module.exports = (dir, thisDir) => {
-  dir = path.isAbsolute(dir)?dir:path.join(thisDir, dir);
-  if (tmp[dir] === undefined) {
-    var moduleObj = {};
-    var files = fs.readdirSync(dir);
-    files.forEach(function(file) {
-      if (file.endsWith('.js')) {
-        var tmp = file.slice(0, -3).split(/\W/);
-        tmp = tmp.shift() + tmp.map(function(i) {
-          return i[0].toUpperCase() + i.substring(1)
-        }).join('');
-        moduleObj[tmp] = require(path.join(dir, file));
-      }
-    });
-    tmp[dir] = moduleObj;
+function dirFilter (absolutePathStr) {
+  return fs.lstatSync(absolutePathStr).isDirectory()
+}
+
+function jsFileFilter (absolutePathStr) {
+  return fs.lstatSync(absolutePathStr).isFile() && absolutePathStr.endsWith('.js')
+}
+
+function openDir (dir) {
+  let readRes = fs.readdirSync(dir)
+  dirPath.push(...readRes.map(p => path.join(dir, p)).filter(jsFileFilter))
+  readRes.map(p => path.join(dir, p)).filter(dirFilter).forEach(i => openDir(i))
+}
+
+function camelCase (name) {
+  let spil = name.trim().split(/[^0-9a-zA-Z]/).filter(i => (i !== ''))
+  return (spil.shift() + spil.map(i => (`${i.charAt(0).toUpperCase()}${i.substr(1)}`)).join(''))
+}
+
+function propsArrHanler (parent, arr) {
+  if (!parent[arr[0]] && arr.length > 0) parent[camelCase(arr[0])] = {}
+  return (arr.length > 1) ? propsArrHanler(parent[arr.shift()], arr) : parent[arr.shift()] || parent
+}
+
+module.exports = (dir, thisDir, isNoTree) => {
+  let baseDir = path.isAbsolute(dir) ? dir : path.join(thisDir, dir)
+  if (!tree[baseDir]) {
+    tree[baseDir] = {}
+    notTree[baseDir] = {}
+  } else if (isNoTree) {
+    return notTree[baseDir] = {}
+  } else {
+    return tree[baseDir]
   }
-  return tmp[dir];
-};
+  openDir(baseDir)
+  // do tree
+  dirPath.forEach(i => (propsArrHanler(tree[baseDir], i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')))[camelCase(path.basename(i, 'js'))] = require(i)))
+  // do notTree
+  dirPath.forEach(i => notTree[baseDir][camelCase(i.split(baseDir)[1].split(path.sep).slice(0, -1).filter(i => (i !== '')).concat(path.basename(i, 'js')).map(i => camelCase(i)).join('.'))] = require(i))
+  // clean dirPath
+  dirPath.splice(0, dirPath.length)
+  return isNoTree ? notTree[baseDir] : tree[baseDir]
+}
